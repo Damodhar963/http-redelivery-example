@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:user-api="http://www.mulesoft.org/schema/mule/user-api"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/user-api http://www.mulesoft.org/schema/mule/user-api/current/mule-user-api.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="9c10734b-651e-444e-b8ae-ba1b1fd49531" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+
+	 <os:object-store name="redelivery_store" doc:name="Object store" doc:id="ea1ee67e-c07f-46c7-a11d-5a8614923c34" />
+	<flow name="exhaustRedeliveryFlow">
+        <http:listener path="/test" config-ref="HTTP_Listener_config">
+            <redelivery-policy maxRedeliveryCount="2" idExpression="#[attributes.method]" useSecureHash="false"/>
+            <http:error-response statusCode="#[vars.code]"/>
+        </http:listener>
+        <logger level="INFO" doc:name="Logger" doc:id="1e05a73d-4927-41bf-973c-8de1f3e96876" />
+		<raise-error type="ROUTING" description="This is a routing error."/>
+        <error-handler>
+            <on-error-propagate type="ROUTING">
+                <set-variable variableName="code" value="500"/>
+            </on-error-propagate>
+            <on-error-propagate type="REDELIVERY_EXHAUSTED">
+                <set-variable variableName="code" value="503"/>
+                <logger level="INFO" doc:name="Logger" doc:id="08f06ac6-6de3-4df5-a118-6b001a152135" message="#[payload]"/>
+				<set-payload value="#[error]"/>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+</mule>
