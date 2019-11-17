@@ -31,4 +31,22 @@ http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/cu
             </on-error-propagate>
         </error-handler>
     </flow>
+	<flow name="exhaustRedeliveryFlow">
+        <http:listener path="/test1" config-ref="HTTP_Listener_config">
+            <redelivery-policy maxRedeliveryCount="2" idExpression="#[attributes.method]" useSecureHash="false"/>
+            <http:error-response statusCode="#[vars.code]"/>
+        </http:listener>
+        <logger level="INFO" doc:name="Logger" doc:id="1e05a73d-4927-41bf-973c-8de1f3e96876" />
+		<raise-error type="ROUTING" description="This is a routing error."/>
+        <error-handler>
+            <on-error-propagate type="ROUTING">
+                <set-variable variableName="code" value="500"/>
+            </on-error-propagate>
+            <on-error-propagate type="REDELIVERY_EXHAUSTED">
+                <set-variable variableName="code" value="503"/>
+                <logger level="INFO" doc:name="Logger" doc:id="08f06ac6-6de3-4df5-a118-6b001a152135" message="#[payload]"/>
+				<set-payload value="#[error]"/>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
 </mule>
